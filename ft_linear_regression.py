@@ -46,23 +46,24 @@ def ft_linear_regression(datas, teta0, teta1):
     #print(normalized_datas)
     # On defini un learning rate de depart pour faire des pas plus ou moins grand sur la courbe d'erreur
     learning_rate = 0.000041
-    nb_iterations = 10
-    weaker_err = calcute_sum_m(tmp0, tmp1, datas)[0]
+    nb_iterations = 1000
+    weaker_err = calcute_sum_m(tmp0, tmp1, datas)
     #print ("datas:", datas)
     i = 0
     while i < nb_iterations:
 
         # Il faut ici recuperer la moyenne de la somme des erreurs pour teta0 et teta1
         sums_m = calcute_sum_m(tmp0, tmp1, datas)
-        print(estimatePrice(82029, tmp0, tmp1))
-        print("Moyenne d'etteur:", sums_m[0])
+        
+        #print("Moyenne d'etteur:", sums_m[0])
         # On peu maintenant recalculer teta0 et teta1
         tmp0 = tmp0 - learning_rate * sums_m[0]
         tmp1 = tmp1 - learning_rate * sums_m[1] 
-        if abs(sums_m[0]) < abs(weaker_err):
-            weaker_err = sums_m[0]
+        if abs(sums_m[0]) < abs(weaker_err[0]):
+            weaker_err = sums_m
         i += 1
-    print(weaker_err, " ", i)
+    print(weaker_err[0], " ", i)
+    print("prix estime:", estimatePrice(82029, weaker_err[0], weaker_err[1]))
 
 def main():
     # Recuperation des donnees dans le csv
