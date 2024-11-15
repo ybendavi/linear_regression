@@ -24,16 +24,24 @@ def calculate_v(mean, column, size):
 def standardize_column(column, standard_deviation, mean):
     return ((column - mean) / standard_deviation )
 
+def destandardize_col(column, standard_deviation, mean):
+    return ((column * standard_deviation) + mean)
+#Fonctions pour destandardiser les teta
+def destandardise_teta1(teta1, standard_deviation):
+    return (teta1 / standard_deviation)
+
+def destandardise_teta0(teta0, standard_deviation, m, teta1_d):
+    return (teta0 * standard_deviation - m * teta1_d)
 #Fonctions pour calculer les erreurs correspond a la partie estimatePrice(mileage[i]) − price[i] de la formule
 def calculate_err_0(line, tmp0, tmp1, test):
     if test == 0:
-        return (estimatePrice(line["s_km"], tmp0, tmp1) - line["s_price"])
+        return (estimatePrice(line["s_km"], tmp0, tmp1) - line["price"])
     else:
         return (estimatePrice(line["km"], tmp0, tmp1) - line["price"])
 
 # Pour le teta 1 il faut multiplier la marge d'erreur par le mileage par rapport a l'influence qu'il a sur la courbe
 def calculate_err_1(line, tmp0, tmp1):
-    return ((estimatePrice(line["s_km"], tmp0, tmp1) - line["s_price"]) * line["s_km"])
+    return ((estimatePrice(line["s_km"], tmp0, tmp1) - line["price"]) * line["s_km"])
 
 def calcute_sum_m(tmp0, tmp1, datas):
     tab0 = []
@@ -69,17 +77,16 @@ def ft_linear_regression(datas, teta0, teta1):
     tmp1 = teta1
     new0 = tmp0
     new1 = tmp1
+    s_tmp1 = 0
+    s_tmp0 = 0
     #print(normalized_datas)
     #On va standardiser les valeurs pour ca on calcule l'ecart type
     mean_mileage = datas["km"].sum() /  len(datas["km"])
     standard_deviation_mileage = math.sqrt(calculate_v(mean_mileage, datas["km"], len(datas["km"])))
     datas["s_km"] = datas["km"].apply(standardize_column, args=(standard_deviation_mileage, mean_mileage))
-    mean_price= datas["price"].sum() /  len(datas["price"])
-    standard_deviation_price = math.sqrt(calculate_v(mean_price, datas["price"], len(datas["price"])))
-    datas["s_price"] = datas["price"].apply(standardize_column, args=(standard_deviation_price, mean_price))
     # On defini un learning rate de depart pour faire des pas plus ou moins grand sur la courbe d'erreur
-    learning_rate = 0.006
-    nb_iterations = 50
+    learning_rate = 0.000001
+    nb_iterations = 10
     weaker_err = calculate_mae(tmp0, tmp1, datas)
     print("werror", weaker_err)
     #print ("datas:", datas)
@@ -90,16 +97,18 @@ def ft_linear_regression(datas, teta0, teta1):
         # Il faut ici recuperer la moyenne de la somme des erreurs pour teta0 et teta1
         sums_m = calcute_sum_m(tmp0, tmp1, datas)
         
-        # print("Moyenne d'erreur:", sums_m[0])
         # On peu maintenant recalculer teta0 et teta1
         tmp0 = tmp0 - learning_rate * sums_m[0]
-        tmp1 = tmp1 - learning_rate * sums_m[1] 
-        new_err = calculate_mae(tmp0, tmp1, datas)
+        tmp1 = tmp1 - learning_rate * sums_m[1]
+        s_tmp1 = destandardise_teta1(tmp1, standard_deviation_mileage)
+        s_tmp0 = destandardise_teta0(tmp0, standard_deviation_mileage, mean_mileage, s_tmp1) 
+        new_err = calculate_mae(s_tmp0, s_tmp1, datas)
+        print("Moyenne d'erreur:",  new_err)
         #print("new err", new_err)
         if weaker_err > new_err:
             weaker_err = new_err
-            new0 = tmp0
-            new1 = tmp1
+            new0 = s_tmp0
+            new1 = s_tmp1
             savedi = i
         i += 1
     print(weaker_err, " ", savedi)
