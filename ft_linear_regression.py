@@ -1,5 +1,16 @@
 import pandas as pd
 import math 
+import matplotlib.pyplot as plt
+
+#Fonction de visualisation
+def visusalize(datas):
+    plt.scatter(datas["km"], datas["price"], color="blue", label="Données réelles") 
+    plt.plot(datas["km"], datas["estimated price"], color="red", label="Prédiction de la régression")
+    plt.xlabel("Variable indépendante")
+    plt.ylabel("Variable dépendante")
+    plt.legend()
+    plt.title("Visualisation de la régression linéaire")
+    plt.show()
 
 # Fonction de prediction
 def estimatePrice(mileage, teta0, teta1):
@@ -86,7 +97,7 @@ def ft_linear_regression(datas, teta0, teta1):
     datas["s_km"] = datas["km"].apply(standardize_column, args=(standard_deviation_mileage, mean_mileage))
     # On defini un learning rate de depart pour faire des pas plus ou moins grand sur la courbe d'erreur
     learning_rate = 0.000001
-    nb_iterations = 10
+    nb_iterations = 50
     weaker_err = calculate_mae(tmp0, tmp1, datas)
     print("werror", weaker_err)
     #print ("datas:", datas)
@@ -110,10 +121,12 @@ def ft_linear_regression(datas, teta0, teta1):
             new0 = s_tmp0
             new1 = s_tmp1
             savedi = i
+        datas["estimated price"] = datas["km"].apply(estimatePrice, args=(s_tmp0, s_tmp1))
+        visusalize(datas)
         i += 1
     print(weaker_err, " ", savedi)
     datas["estimated price"] = datas["km"].apply(estimatePrice, args=(new0, new1))
-    print(datas)
+    print(datas, "/nNormailized tetas:", new0, " ", new1)
 def main():
     # Recuperation des donnees dans le csv
     datas = None
