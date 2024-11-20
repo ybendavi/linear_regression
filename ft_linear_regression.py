@@ -2,7 +2,7 @@ import pandas as pd
 import math 
 import matplotlib.pyplot as plt
 
-#Fonction de visualisation
+#Fonctions de visualisation
 def visusalize(datas):
     plt.cla()
     plt.scatter(datas["km"], datas["price"], color="blue", label="Données réelles") 
@@ -17,19 +17,13 @@ def visualize_curve(datas):
     plt.plot(datas["iteration"], datas["loss"], marker='o', color='blue', label="Perte")
     plt.xlabel("Itérations")
     plt.ylabel("Valeur de la perte")
-    plt.title("Courbe de perte avec un DataFrame")
+    plt.title("Courbe de perte")
     plt.legend()
     plt.grid(True)
     plt.show()
 # Fonction de prediction
 def estimatePrice(mileage, teta0, teta1):
     return (teta0 + (teta1 * mileage))
-
-def printEstimatedPrice(column, tetas):
-    return (tetas[0] + (teta[1] * mileage))
-
-def normalize(number, n_min, n_max):
-    return (number - n_min) / (n_max - n_min)
 
 def calculate_square(column, mean):
     return (pow(column - mean, 2))
@@ -51,7 +45,7 @@ def destandardize_col(column, standard_deviation, mean):
 def destandardise_teta1(teta1, standard_deviation):
     return (teta1 / standard_deviation)
 
-def destandardise_teta0(teta0, standard_deviation, m, teta1_d):
+def destandardise_teta0(teta0, m, teta1_d):
     return (teta0 - teta1_d * m)
 
 #Fonctions pour calculer les erreurs correspond a la partie estimatePrice(mileage[i]) − price[i] de la formule
@@ -98,34 +92,40 @@ def calculate_mae(tmp0, tmp1, datas):
     #print("tab:", tab0)
     err_m = sum(tab0) * (1 / m)
     return (err_m)
+
+def calculate_errors(datas, err_curve_tab, i, tmp0, tmp1):
+    new_err = calculate_mae(tmp0, tmp1, datas)
+    err_curve_tab.append({"iteration": i, "loss": new_err})
+    datas["estimated price"] = datas["km"].apply(estimatePrice, args=(tmp0, tmp1))
+    visusalize(datas)
+    return new_err
     
 def ft_linear_regression(datas, teta0, teta1):
     tmp0 = teta0
     tmp1 = teta1
     new0 = tmp0
     new1 = tmp1
-    s_tmp1 = 0
-    s_tmp0 = 0
-    #print(normalized_datas)
+    i = 0
+    savedi = i
+
+    # On defini un learning rate de depart pour faire des pas plus ou moins grand sur la courbe d'erreur
+    learning_rate = 0.05
+    nb_iterations = 100
+
     #On va standardiser les valeurs pour ca on calcule l'ecart type
     mean_mileage = datas["km"].sum() /  len(datas["km"])
     standard_deviation_mileage = math.sqrt(calculate_v(mean_mileage, datas["km"], len(datas["km"])))
     datas["s_km"] = datas["km"].apply(standardize_column, args=(standard_deviation_mileage, mean_mileage))
-    # On defini un learning rate de depart pour faire des pas plus ou moins grand sur la courbe d'erreur
-    learning_rate = 0.01
-    nb_iterations = 1000
     weaker_err = calculate_mae(tmp0, tmp1, datas)
-    print("werror", weaker_err)
+    #print("werror", weaker_err)
     #print ("datas:", datas)
-    i = 0
-    savedi = i
+
     err_curve_tab = []
-    new_err = calculate_mae(tmp0, tmp1, datas)
+
+
+    plt.figure()
+    weaker_err = calculate_errors(datas, err_curve_tab, i, tmp0, tmp1)
     i += 1
-    err_curve_tab.append({"iteration": i, "loss": new_err})
-    #plt.figure()
-    datas["estimated price"] = datas["km"].apply(estimatePrice, args=(tmp0, tmp1))
-    #visusalize(datas)
     while i < nb_iterations:
 
         # Il faut ici recuperer la moyenne de la somme des erreurs pour teta0 et teta1
@@ -137,10 +137,10 @@ def ft_linear_regression(datas, teta0, teta1):
 
         #on destandardise les teta pour calculer la Mean Absolute Error qui nous permet de suivre l'evolution des erreurs        
         d_1 = destandardise_teta1(tmp1, standard_deviation_mileage)
-        d_0 = destandardise_teta0(tmp0, standard_deviation_mileage, mean_mileage, d_1)
+        d_0 = destandardise_teta0(tmp0, mean_mileage, d_1)
         #print("tmp0:", d_0, ",tmp1:", d_1)
-        new_err = calculate_mae(d_0, d_1, datas)
-        err_curve_tab.append({"iteration": i, "loss": new_err})
+        #Calcule de la Mae pour la courbe d'erreur et les predictions
+        new_err = calculate_errors(datas, err_curve_tab, i, d_0, d_1)
         #print("Moyenne d'erreur:",  new_err, "/nteta0:", tmp0, ",teta1:", tmp1)
         #print("new err", new_err)
         if weaker_err > new_err:
@@ -148,14 +148,14 @@ def ft_linear_regression(datas, teta0, teta1):
             new0 = d_0
             new1 = d_1
             savedi = i
-        datas["estimated price"] = datas["km"].apply(estimatePrice, args=(d_0, d_1))
-        #visusalize(datas)
         i += 1
     print(weaker_err, " ", savedi)
 
     err_curve = pd.DataFrame(err_curve_tab)
     datas["estimated price"] = datas["km"].apply(estimatePrice, args=(new0, new1))
-    print(datas, "/nNormailized tetas:", new0, " ", new1)
+    print(datas)
+    print("New tetas:", new0, " ", new1)
+    plt.clf()
     visualize_curve(err_curve)
     #visusalize(datas)
     #plt.show()
