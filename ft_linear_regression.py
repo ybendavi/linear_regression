@@ -1,6 +1,7 @@
 import pandas as pd
 import math 
 import matplotlib.pyplot as plt
+import sys
 
 #Fonctions de visualisation
 def visusalize(datas):
@@ -93,14 +94,15 @@ def calculate_mae(tmp0, tmp1, datas):
     err_m = sum(tab0) * (1 / m)
     return (err_m)
 
-def calculate_errors(datas, err_curve_tab, i, tmp0, tmp1):
+def calculate_errors(datas, err_curve_tab, i, tmp0, tmp1, bonus):
     new_err = calculate_mae(tmp0, tmp1, datas)
     err_curve_tab.append({"iteration": i, "loss": new_err})
     datas["estimated price"] = datas["km"].apply(estimatePrice, args=(tmp0, tmp1))
-    visusalize(datas)
+    if bonus == True:
+        visusalize(datas)
     return new_err
     
-def ft_linear_regression(datas, teta0, teta1):
+def ft_linear_regression(datas, teta0, teta1, bonus):
     tmp0 = teta0
     tmp1 = teta1
     new0 = tmp0
@@ -109,8 +111,8 @@ def ft_linear_regression(datas, teta0, teta1):
     savedi = i
 
     # On defini un learning rate de depart pour faire des pas plus ou moins grand sur la courbe d'erreur
-    learning_rate = 0.05
-    nb_iterations = 100
+    learning_rate = 1
+    nb_iterations = 10
 
     #On va standardiser les valeurs pour ca on calcule l'ecart type
     mean_mileage = datas["km"].sum() /  len(datas["km"])
@@ -122,9 +124,9 @@ def ft_linear_regression(datas, teta0, teta1):
 
     err_curve_tab = []
 
-
-    plt.figure()
-    weaker_err = calculate_errors(datas, err_curve_tab, i, tmp0, tmp1)
+    if bonus == True:
+        plt.figure()
+    weaker_err = calculate_errors(datas, err_curve_tab, i, tmp0, tmp1, bonus)
     i += 1
     while i < nb_iterations:
 
@@ -140,7 +142,7 @@ def ft_linear_regression(datas, teta0, teta1):
         d_0 = destandardise_teta0(tmp0, mean_mileage, d_1)
         #print("tmp0:", d_0, ",tmp1:", d_1)
         #Calcule de la Mae pour la courbe d'erreur et les predictions
-        new_err = calculate_errors(datas, err_curve_tab, i, d_0, d_1)
+        new_err = calculate_errors(datas, err_curve_tab, i, d_0, d_1, bonus)
         #print("Moyenne d'erreur:",  new_err, "/nteta0:", tmp0, ",teta1:", tmp1)
         #print("new err", new_err)
         if weaker_err > new_err:
@@ -149,14 +151,17 @@ def ft_linear_regression(datas, teta0, teta1):
             new1 = d_1
             savedi = i
         i += 1
-    print(weaker_err, " ", savedi)
+    #print(weaker_err, " ", savedi)
 
     err_curve = pd.DataFrame(err_curve_tab)
     datas["estimated price"] = datas["km"].apply(estimatePrice, args=(new0, new1))
-    print(datas)
-    print("New tetas:", new0, " ", new1)
-    plt.clf()
-    visualize_curve(err_curve)
+    #print(datas)
+    #print("New tetas:", new0, " ", new1)
+    if bonus == True:
+        plt.show()
+        plt.clf()
+        visualize_curve(err_curve)
+    return ([new0, new1])
     #visusalize(datas)
     #plt.show()
     
@@ -165,6 +170,7 @@ def main():
     # Recuperation des donnees dans le csv
     datas = None
     tetas = None
+    bonus = False
 
     try:
         datas = pd.read_csv("data.csv")
@@ -179,13 +185,16 @@ def main():
         return
     teta0 = 0
     teta1 = 0
+    if len(sys.argv) == 2:
+        if (sys.argv[1] == "bonus"):
+            bonus = True
+    new_tetas = ft_linear_regression(datas, teta0, teta1, bonus)
+    new_tetas_df = pd.DataFrame(columns=["teta0", "teta1"], dtype=float)
+    new_tetas_df.loc[0, :] = [new_tetas[0], new_tetas[1]]
     try:
-        teta0 = float(tetas["teta0"].iloc[0])
-        teta1 = float(tetas["teta1"].iloc[0])
+        new_tetas_df.to_csv("tetas.csv", mode='w', index=False)
     except Exception as e:
         print("Something went wrong with teta0 and teta1 in the csv file:", str(e))
-        return
-    ft_linear_regression(datas, teta0, teta1)
 
 main()
 
